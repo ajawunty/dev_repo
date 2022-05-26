@@ -5,8 +5,58 @@
 
     },
     "Parameters": {
-    
+    "vpccidr": {
+        "Description": "This is for my vpc cidr block",
+        "Type": "String"
     },
+    "pubsub1cidr": {
+        "Description": "Public subnet 1",
+        "Type": "String"
+    },
+    "pubsub2cidr": {
+      "Description": "Public subnet 2",
+      "Type": "String"
+  },
+    "privsub1cidr": {
+      "Description": "Private subnet 1",
+      "Type": "String"
+    },
+    "privsub2cidr": {
+      "Description": "Private subnet 2",
+      "Type": "String"
+    },
+    "AZA": {
+        "Description": "This is the availability zone A",
+        "Type": "AWS::EC2::AvailabilityZone::Name"    
+    },
+    "AZB": {
+      "Description": "This is the availability zone B",
+      "Type": "AWS::EC2::AvailabilityZone::Name"    
+    },
+    "AZC": {
+      "Description": "This is the availability zone C",
+      "Type": "AWS::EC2::AvailabilityZone::Name"    
+    },
+    "AZD": {
+      "Description": "This is the availability zone D",
+      "Type": "AWS::EC2::AvailabilityZone::Name"    
+    }, 
+    "KeyPair": {
+        "Description": "This is my key pair",
+        "Type": "AWS::EC2::KeyPair::KeyName"        
+    },
+    "ImageID": {
+        "Description": "This is my image ID",
+        "Type": "AWS::EC2::Image::Id"
+    },  
+    "WebserverInstanceType": {
+      "Description": "EC2 instance type for  webserver Server",
+      "Type": "String",
+      "Default": "t2.medium",
+      "AllowedValues": ["t1.micro", "t2.micro", "t2.small", "t2.medium", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge"],
+      "ConstraintDescription": "must be a valid EC2 instance type."
+    }
+  },
     "Mappings": {
 
     },
@@ -16,9 +66,36 @@
     "Resources": {"devvpc": {
       "Type": "AWS::EC2::VPC",
       "Properties": {
-        "CidrBlock": "10.0.0.0/16",
+        "CidrBlock": { "Ref": "vpccidr" },
         "Tags": [{"Key": "Name", "Value": "devvpc"}]
       }
+     },
+     "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+          "GroupDescription" : "Allow http to client host",
+          "VpcId" : {"Ref" : "devvpc"},
+          "SecurityGroupIngress" : [{
+              "IpProtocol" : "tcp",
+              "FromPort" : 80,
+              "ToPort" : 80,
+              "CidrIp" : "0.0.0.0/0"
+          }]
+        }
+     },
+     
+     "web1": {
+         "Type": "AWS::EC2::Instance",
+         "Properties": {
+             "KeyName": { "Ref": "KeyPair" },
+             "DisableApiTermination": "false",
+             "ImageId": { "Ref": "ImageID" },
+             "InstanceType": { "Ref": "WebserverInstanceType" },
+             "Monitoring": "true",
+             "SecurityGroupIds" : [{ "Ref": "InstanceSecurityGroup" }],
+             "Tags": [{"Key": "Name", "Value": "web1"}],
+             "SubnetId": { "Ref": "pubsub1" }
+            }
      },
     "devvpcigw": {
       "Type": "AWS::EC2::InternetGateway",
@@ -58,13 +135,22 @@
     "pubsub1": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
-        "AvailabilityZone": "us-east-1a",
+        "AvailabilityZone": { "Ref": "AZA" },
         "VpcId": { "Ref": "devvpc" },
-        "CidrBlock": "10.0.1.0/24",
+        "CidrBlock": { "Ref": "pubsub1cidr" },
         "Tags":[{ "Key": "Name", "Value":  "pubsub1" }]
       }
      },
-    "devvpcprivrtb": {
+     "pubsub2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": { "Ref": "AZC" },
+        "VpcId": { "Ref": "devvpc" },
+        "CidrBlock": { "Ref": "pubsub2cidr" },
+        "Tags":[{ "Key": "Name", "Value":  "pubsub2" }]
+      }
+     },
+      "devvpcprivrtb": {
         "Type": "AWS::EC2::RouteTable",
         "Properties": {
           "VpcId": { "Ref": "devvpc" },
@@ -78,15 +164,24 @@
           "RouteTableId": { "Ref": "devvpcprivrtb" }
         }
       }, 
-    "privsub1": {
+      "privsub1": {
         "Type": "AWS::EC2::Subnet",
         "Properties": {
-          "AvailabilityZone": "us-east-1a",
+          "AvailabilityZone": { "Ref": "AZB" },
           "VpcId": { "Ref": "devvpc" },
-          "CidrBlock": "10.0.2.0/24",
+          "CidrBlock": { "Ref": "privsub1cidr" },
           "Tags":[{ "Key": "Name", "Value":  "privsub1" }]
         }
-      }
+      },
+      "privsub2": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "AvailabilityZone": { "Ref": "AZD" },
+          "VpcId": { "Ref": "devvpc" },
+          "CidrBlock": { "Ref": "privsub2cidr" },
+          "Tags":[{ "Key": "Name", "Value":  "privsub2" }]
+        }
+      } 
     },
     "Outputs": {
 
